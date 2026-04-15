@@ -83,6 +83,11 @@ export const AIChat = ({ taskId, submissionId, onClose }) => {
     }
 
     const userMessage = input.trim();
+    if (userMessage.length < 3) {
+      setError("Please type at least 3 characters before sending.");
+      return;
+    }
+
     setInput("");
     setError("");
     setLoading(true);
@@ -115,7 +120,8 @@ export const AIChat = ({ taskId, submissionId, onClose }) => {
           },
         ]);
       } else {
-        const errorMessage = result?.error || "Failed to get response";
+        const errorMessage =
+          result?.error || result?.message || result?.errors?.[0] || "Failed to get response";
         setError(errorMessage);
         setMessages((prev) => [
           ...prev,

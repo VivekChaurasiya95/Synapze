@@ -35,7 +35,9 @@ export const sendMessage = async (params) => {
 
     // Extract error message from various possible response structures
     const errorData = error?.response?.data;
-    if (errorData?.error) {
+    if (errorData?.errors && Array.isArray(errorData.errors)) {
+      throw { error: errorData.errors.join(", ") };
+    } else if (errorData?.error) {
       throw { error: errorData.error };
     } else if (errorData?.message) {
       throw { error: errorData.message };
@@ -43,6 +45,47 @@ export const sendMessage = async (params) => {
       throw { error: error.message };
     } else {
       throw { error: "Failed to get AI response. Please try again." };
+    }
+  }
+};
+
+/**
+ * Send message to Groq Llama 3.1 via the backend AI route
+ * @param {object} params - Request parameters
+ * @param {string} params.message - User message
+ * @param {string} params.taskId - Optional task ID
+ * @param {string} params.submissionId - Optional submission ID
+ * @param {array} params.conversationHistory - Conversation history
+ * @returns {Promise} - AI response
+ */
+export const sendGroqMessage = async (params) => {
+  const { message, taskId, submissionId, conversationHistory = [] } = params;
+
+  try {
+    const response = await api.post("/ai/groq", {
+      message,
+      taskId,
+      submissionId,
+      conversationHistory,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error sending Groq AI message:", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message,
+    });
+
+    const errorData = error?.response?.data;
+    if (errorData?.error) {
+      throw { error: errorData.error };
+    } else if (errorData?.message) {
+      throw { error: errorData.message };
+    } else if (error?.message) {
+      throw { error: error.message };
+    } else {
+      throw { error: "Failed to get Groq AI response. Please try again." };
     }
   }
 };
@@ -105,6 +148,7 @@ export const checkAIHealth = async () => {
 
 export default {
   sendMessage,
+  sendGroqMessage,
   getChatHistory,
   clearChatHistory,
   getAIStatus,

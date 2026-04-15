@@ -50,7 +50,11 @@
 
   /* Cards */
   .card {
-    @apply bg-brand-card/20 backdrop-blur-[16px] rounded-[32px] p-6 transition-all duration-300 border border-white/5;
+    @apply rounded-[32px] p-6 transition-all duration-300 border border-white/10;
+    background: rgba(0, 0, 0, 0.4);
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.2));
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
   }
   
   .card-hover {
@@ -87,7 +91,10 @@
   }
 
   .glass-header {
-    @apply bg-brand-dark/80 backdrop-blur-md border-b border-white/5;
+    @apply border-b border-white/10;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
   }
 }
 

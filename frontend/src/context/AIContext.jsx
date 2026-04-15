@@ -42,6 +42,11 @@ export const AIProvider = ({ children }) => {
    */
   const handleSendMessage = useCallback(
     async (message, taskId, submissionId) => {
+      const trimmedMessage = message?.trim();
+      if (!trimmedMessage || trimmedMessage.length < 3) {
+        throw new Error("Please type at least 3 characters before sending.");
+      }
+
       try {
         setError(null);
         setLoading(true);
@@ -49,14 +54,14 @@ export const AIProvider = ({ children }) => {
         // Add user message
         const userMsg = {
           sender: "user",
-          content: message,
+          content: trimmedMessage,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, userMsg]);
 
         // Get AI response
         const result = await sendMessage({
-          message,
+          message: trimmedMessage,
           taskId,
           submissionId,
           conversationHistory: messages,

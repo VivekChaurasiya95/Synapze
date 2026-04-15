@@ -3,7 +3,10 @@
  * Main orchestrator that coordinates all AI components
  */
 
-import { generateAIResponse } from "../../utils/aiConfig.js";
+import {
+  generateAIResponse,
+  checkAIConnection,
+} from "../../utils/aiConfig.js";
 import { detectIntent } from "./intentDetection.js";
 import {
   buildContext,
@@ -212,10 +215,25 @@ export const processAIRequest = async (params = {}) => {
       errorMessage = "AI model is not available. Please contact administrator.";
     }
 
+    let statusCode = 500;
+
+    if (error.message.includes("Missing required parameters")) {
+      statusCode = 400;
+    } else if (
+      error.message.includes("Ollama") ||
+      error.message.includes("Groq") ||
+      error.message.includes("Connection to AI service failed") ||
+      error.message.includes("Cannot connect") ||
+      error.message.includes("AI service is not available")
+    ) {
+      statusCode = 503;
+    }
+
     return {
       success: false,
       error: errorMessage,
       reason: error.message,
+      status: statusCode,
     };
   }
 };
@@ -315,14 +333,22 @@ export const clearConversationHistory = (userId) => {
  */
 export const getAISystemStatus = async () => {
   try {
-    const { checkOllamaHealth } = await import("../../utils/aiConfig.js");
-    const isHealthy = await checkOllamaHealth();
+    const isHealthy = await checkAIConnection();
+    const provider = process.env.AI_PROVIDER
+      ? process.env.AI_PROVIDER.toLowerCase()
+      : process.env.GROQ_API_KEY
+      ? "groq"
+      : "ollama";
 
     return {
       healthy: isHealthy,
-      ollama: {
+      ai: {
+        provider,
         status: isHealthy ? "running" : "offline",
-        model: process.env.AI_MODEL || "mistral",
+        model:
+          provider === "groq"
+            ? process.env.GROQ_MODEL || "llama_3_1"
+            : process.env.AI_MODEL || "mistral",
       },
       activeConversations: conversationStore.size,
       timestamp: new Date(),
