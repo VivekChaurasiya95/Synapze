@@ -35,6 +35,33 @@ export const chatWithAI = asyncHandler(async (req, res) => {
     conversationHistory,
   });
 
+  res.status(result.success ? 200 : result.status || 400).json(result);
+});
+
+/**
+ * POST /api/ai/groq
+ * Process chat message through Groq Llama 3.1
+ */
+export const chatWithGroqAI = asyncHandler(async (req, res) => {
+  const { message, taskId, submissionId, conversationHistory } = req.body;
+  const { _id: userId, role = "student" } = req.user;
+
+  logger.info("Groq chat request received", {
+    userId,
+    role,
+    hasMessage: !!message,
+  });
+
+  const result = await processAIRequest({
+    userId: userId.toString(),
+    message,
+    role,
+    taskId,
+    submissionId,
+    conversationHistory,
+    provider: "groq",
+  });
+
   res.status(result.success ? 200 : 400).json(result);
 });
 

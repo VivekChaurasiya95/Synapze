@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { taskService } from "../services/taskService";
@@ -12,6 +13,8 @@ import {
   PlusCircle,
   TrendingUp,
   ArrowRight,
+  Menu,
+  X,
 } from "lucide-react";
 import {
   PageLoading,
@@ -29,6 +32,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("posted");
   const [editingTask, setEditingTask] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // 1. Move function definitions to the TOP of the component
   // to ensure they are defined before the JSX (Return) is reached.
@@ -122,30 +126,134 @@ const Dashboard = () => {
     { id: "taken", label: "Tasks Taken", count: tasks.taken.length },
   ];
 
+  const sidebarLinks = [
+    { label: "Overview", href: "#overview" },
+    { label: "Quick Actions", href: "#quick-actions" },
+    { label: "Your Tasks", href: "#your-tasks" },
+    { label: "Browse Tasks", to: "/browse" },
+  ];
+
+  const MotionLink = motion.create(Link);
+  const MotionAnchor = motion.a;
+
+  const sidebarItemVariants = {
+    hidden: { opacity: 0, x: -12 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: "easeOut" } },
+  };
+
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.12,
+        delayChildren: 0.12,
+      },
+    },
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 18, scale: 0.98 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35, ease: "easeOut" } },
+  };
+
+  const drawerVariants = {
+    hidden: { x: -320, opacity: 0 },
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 260, damping: 28 },
+    },
+  };
+
+  const overlayVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.2 } },
+  };
+
   return (
-    <div className="wrapper py-8 animate-fade-in">
-      {/* Header */}
-      <div className="mb-10">
-        <div className="flex items-center space-x-4 mb-3">
-          <div className="p-2 bg-brand-accent/10 rounded-xl border border-brand-accent/20">
-            <LayoutDashboard className="w-8 h-8 text-brand-accent" />
-          </div>
-          <h1 className="text-4xl font-bold tracking-tight text-white">
-            My <span className="text-gradient">Dashboard</span>
-          </h1>
+    <div className="min-h-screen grid grid-cols-[260px_minmax(0,1fr)] overflow-hidden animate-fade-in">
+      <aside className="sticky top-0 h-screen overflow-hidden border-r border-white/10 bg-[rgba(0,0,0,0.4)] backdrop-blur-[16px] backdrop-saturate-150 shadow-[0_20px_80px_rgba(15,23,42,0.15)] px-6 py-8">
+        <div className="mb-10">
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-text-muted mb-3">
+            Navigation
+          </p>
+          <h2 className="text-2xl font-semibold text-white">Dashboard</h2>
         </div>
-        <p className="text-brand-text-secondary text-lg">
-          Welcome back,{" "}
-          <span className="text-white font-medium">{user?.name}</span>!
-        </p>
-      </div>
+
+        <nav className="space-y-2">
+          {sidebarLinks.map((link, index) => {
+            const commonClasses =
+              "block rounded-2xl px-4 py-3 text-sm font-medium text-brand-text-secondary transition-colors duration-300 ease-in-out hover:text-white hover:bg-brand-accent/10";
+            return link.to ? (
+              <MotionLink
+                key={index}
+                to={link.to}
+                className={commonClasses}
+                variants={sidebarItemVariants}
+                initial="hidden"
+                animate="visible"
+                whileHover={{ x: 8, color: "#fff" }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {link.label}
+              </MotionLink>
+            ) : (
+              <MotionAnchor
+                key={index}
+                href={link.href}
+                className={commonClasses}
+                variants={sidebarItemVariants}
+                initial="hidden"
+                animate="visible"
+                whileHover={{ x: 8, color: "#fff" }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {link.label}
+              </MotionAnchor>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <div className="min-h-screen overflow-y-auto px-8 py-8">
+        <div className="grid gap-6">
+          {/* Header */}
+          <motion.div
+            id="overview"
+            className="mb-10 rounded-[32px] border border-white/10 bg-[rgba(0,0,0,0.4)] p-8 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur-[16px] backdrop-saturate-150"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          >
+            <div className="flex items-center space-x-4 mb-3">
+              <div className="p-2 bg-brand-accent/10 rounded-xl border border-brand-accent/20">
+                <LayoutDashboard className="w-8 h-8 text-brand-accent" />
+              </div>
+              <h1 className="text-4xl font-bold tracking-tight text-white">
+                My <span className="text-gradient">Dashboard</span>
+              </h1>
+            </div>
+            <p className="text-brand-text-secondary text-lg">
+              Welcome back,{" "}
+              <span className="text-white font-medium">{user?.name}</span>!
+            </p>
+          </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <motion.div
+        className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {statCards.map((stat, index) => (
-          <div
+          <motion.div
             key={index}
             className="card p-6 border-brand-border/50 hover:border-brand-accent/20 group"
+            variants={cardVariants}
+            layout
+            whileHover={{ scale: 1.02, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.18)" }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
           >
             <div className="flex items-center justify-between mb-4">
               <div
@@ -158,12 +266,12 @@ const Dashboard = () => {
             <p className="text-xs font-bold uppercase tracking-widest text-brand-text-muted">
               {stat.title}
             </p>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+      <div id="quick-actions" className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
         <Link
           to="/post-task"
           className="card p-6 flex items-center justify-between group hover:border-brand-accent/30 bg-gradient-to-br from-brand-card to-brand-surface"
@@ -206,7 +314,7 @@ const Dashboard = () => {
       </div>
 
       {/* Tasks Section */}
-      <div className="card overflow-hidden p-0 border-brand-border/30">
+      <div id="your-tasks" className="card overflow-hidden p-0 border-brand-border/30">
         <div className="bg-brand-surface/30 px-6 border-b border-brand-border">
           <div className="flex">
             {tabs.map((tab) => (
@@ -234,17 +342,30 @@ const Dashboard = () => {
         <div className="p-8">
           {activeTab === "posted" ? (
             tasks.posted.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <motion.div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
                 {tasks.posted.map((task) => (
-                  <TaskCard
+                  <motion.div
                     key={task._id}
-                    task={task}
-                    isOwner={true}
-                    onEdit={() => handleEditTask(task)}
-                    onDelete={() => handleDeleteTask(task._id)}
-                  />
+                    variants={cardVariants}
+                    layout
+                    whileHover={{ scale: 1.02, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.18)" }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    className="rounded-[24px]"
+                  >
+                    <TaskCard
+                      task={task}
+                      isOwner={true}
+                      onEdit={() => handleEditTask(task)}
+                      onDelete={() => handleDeleteTask(task._id)}
+                    />
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             ) : (
               <EmptyState
                 title="No tasks posted"
@@ -256,11 +377,25 @@ const Dashboard = () => {
               />
             )
           ) : tasks.taken.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
               {tasks.taken.map((task) => (
-                <TaskCard key={task._id} task={task} />
+                <motion.div
+                  key={task._id}
+                  variants={cardVariants}
+                  layout
+                  whileHover={{ scale: 1.02, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.18)" }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="rounded-[24px]"
+                >
+                  <TaskCard key={task._id} task={task} />
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : (
             <EmptyState
               title="No tasks taken"
@@ -273,6 +408,8 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+    </div>
+  </div>
 
       {/* Modals */}
       {showEditModal && (

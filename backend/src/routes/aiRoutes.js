@@ -8,6 +8,7 @@ import { protect } from "../middleware/auth.js";
 import { chatAIRules } from "../middleware/validate.js";
 import {
   chatWithAI,
+  chatWithGroqAI,
   getHistory,
   clearHistory,
   getStatus,
@@ -28,6 +29,9 @@ router.use(protect);
 
 // Main chat endpoint
 router.post("/chat", chatAIRules, chatWithAI);
+
+// Groq-specific chat endpoint
+router.post("/groq", chatAIRules, chatWithGroqAI);
 
 // Get conversation history
 router.get("/history", getHistory);
