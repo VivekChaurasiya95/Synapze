@@ -334,21 +334,14 @@ export const clearConversationHistory = (userId) => {
 export const getAISystemStatus = async () => {
   try {
     const isHealthy = await checkAIConnection();
-    const provider = process.env.AI_PROVIDER
-      ? process.env.AI_PROVIDER.toLowerCase()
-      : process.env.GROQ_API_KEY
-      ? "groq"
-      : "ollama";
+    const provider = "groq";
 
     return {
       healthy: isHealthy,
       ai: {
         provider,
         status: isHealthy ? "running" : "offline",
-        model:
-          provider === "groq"
-            ? process.env.GROQ_MODEL || "llama_3_1"
-            : process.env.AI_MODEL || "mistral",
+        model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
       },
       activeConversations: conversationStore.size,
       timestamp: new Date(),

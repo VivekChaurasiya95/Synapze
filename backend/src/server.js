@@ -1,6 +1,6 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { createServer } from "http";
@@ -27,8 +27,8 @@ import aiRoutes from "./routes/aiRoutes.js";
 import adminRoutes from "./admin/admin.routes.js";
 import { metricsMiddleware } from "./middleware/metrics.js";
 
-// Load env vars
-dotenv.config();
+// Load env vars - handled by import "dotenv/config"
+// dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
