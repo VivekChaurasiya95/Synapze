@@ -1,12 +1,15 @@
 import mongoose from "mongoose";
 import dns from "node:dns";
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import logger from "./logger.js";
 
 // Connection pool configuration for better resource management
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 3; // Reduced for faster feedback
 const RETRY_DELAY = 5000; // 5 seconds
 const CONNECTION_POOL_SIZE = 10; // Max connections in pool
 const CONNECTION_TIMEOUT = 30000; // 30 seconds to establish connection
+
+let mongodInstance = null;
 
 const configureDnsForSrv = () => {
   const mongoUri = process.env.MONGODB_URI || "";
@@ -33,7 +36,14 @@ const connectDB = async (retries = MAX_RETRIES) => {
   try {
     configureDnsForSrv();
 
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const currentUri = process.env.MONGODB_URI;
+    
+    // Check if URI is a placeholder from Atlas
+    if (currentUri.includes("<db_password>")) {
+       throw new Error("Invalid MongoDB URI: Please replace <db_password> with your actual password in .env");
+    }
+
+    const conn = await mongoose.connect(currentUri, {
       // Connection pool settings
       maxPoolSize: CONNECTION_POOL_SIZE,
       minPoolSize: 5,
@@ -48,14 +58,12 @@ const connectDB = async (retries = MAX_RETRIES) => {
 
       // Network optimization
       family: 4, // Force IPv4 – avoids IPv6 DNS delays on many networks
-
-      // Connection string defaults
-      authSource: "admin",
     });
 
     logger.info("MongoDB Connected successfully", {
       host: conn.connection.host,
       dbName: conn.connection.db?.databaseName,
+      isMemoryServer: !!mongodInstance
     });
 
     // Handle connection events
@@ -89,10 +97,19 @@ const connectDB = async (retries = MAX_RETRIES) => {
       }
     }
   } catch (error) {
-    logger.error(
-      `MongoDB connection failed (attempt ${MAX_RETRIES - retries + 1}/${MAX_RETRIES})`,
-      error,
-    );
+    const isConnRefused = error.message.includes("ECONNREFUSED") || error.message.includes("Server selection timed out");
+    
+    if (isConnRefused) {
+      logger.error(
+        `MongoDB connection failed: ${error.message}. Is MongoDB running?`,
+        { attempt: MAX_RETRIES - retries + 1 }
+      );
+    } else {
+      logger.error(
+        `MongoDB connection failed (attempt ${MAX_RETRIES - retries + 1}/${MAX_RETRIES})`,
+        error,
+      );
+    }
 
     if (retries > 0) {
       logger.info(`Retrying in ${RETRY_DELAY / 1000}s...`, {
@@ -102,7 +119,21 @@ const connectDB = async (retries = MAX_RETRIES) => {
       return connectDB(retries - 1);
     }
 
-    logger.critical("Max retries reached. Unable to connect to MongoDB");
+    // Fallback for development: Start an in-memory MongoDB instance
+    if (process.env.NODE_ENV !== 'production' && !mongodInstance) {
+      try {
+        logger.warn("⚠️ Local MongoDB not found. Starting in-memory fallback for development...");
+        mongodInstance = await MongoMemoryServer.create();
+        const uri = mongodInstance.getUri();
+        logger.info(`🚀 In-memory MongoDB started at: ${uri}`);
+        process.env.MONGODB_URI = uri;
+        return connectDB(1); // Try one last time with memory server
+      } catch (memError) {
+        logger.critical("Failed to start in-memory MongoDB fallback", memError);
+      }
+    }
+
+    logger.critical("Max retries reached. Unable to connect to MongoDB. Please check your database connection.");
     process.exit(1);
   }
 };

@@ -4,10 +4,18 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "build": "yarn install && cd backend && yarn install",
-    "start": "cd backend && yarn start"
+    "build": "npm run install:all && npm run build:frontend",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build:frontend": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

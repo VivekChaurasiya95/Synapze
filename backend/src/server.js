@@ -1,5 +1,7 @@
 import "dotenv/config";
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -15,6 +17,9 @@ import requestTimeout from "./middleware/requestTimeout.js";
 import socketAuthAndRateLimit from "./middleware/socketRateLimit.js";
 import logger from "./config/logger.js";
 import { ensureDummyAdmin } from "./utils/adminBootstrap.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Route imports
 import authRoutes from "./routes/authRoutes.js";
@@ -131,6 +136,18 @@ app.use("/api/mentors", mentorRoutes);
 app.use("/api/metrics", metricsRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
+
+// --- Production Frontend Serving ---
+if (process.env.NODE_ENV === "production") {
+  const frontendPath = path.join(__dirname, "../../frontend/dist");
+  app.use(express.static(frontendPath));
+  
+  // Handle SPA routing - send index.html for any non-API routes
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    res.sendFile(path.resolve(frontendPath, "index.html"));
+  });
+}
 
 // Health check route (verifies DB connectivity)
 app.get("/api/health", async (req, res) => {
