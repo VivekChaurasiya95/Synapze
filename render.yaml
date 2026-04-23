@@ -2,12 +2,12 @@ services:
   - type: web
     name: Synapze-backend
     runtime: node
-    buildCommand: yarn install && cd backend && yarn install
-    startCommand: cd backend && yarn start
+    buildCommand: npm install; npm run build
+    startCommand: cd backend && npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 5000
       - key: CLIENT_URL
-        value: https://Synapze-delta.vercel.app
+        value: https://synapze.vercel.app
