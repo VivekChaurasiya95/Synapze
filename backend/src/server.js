@@ -47,29 +47,42 @@ if (process.env.NODE_ENV === "production") {
 // Disable etag generation to prevent 304 responses on GET requests
 app.set("etag", false);
 
-// Health check endpoint at root (for Render health checks - BEFORE CORS middleware)
-app.get("/", (req, res) => {
-  res.status(200).json({ status: "ok", message: "Server is running" });
-});
-
-app.head("/", (req, res) => {
-  res.status(200).end();
-});
-
 // Allowed origins for CORS
 const allowedOrigins =
   process.env.NODE_ENV === "production"
-    ? [process.env.CLIENT_URL]
+    ? [
+        process.env.CLIENT_URL,
+        "https://synapze.vercel.app",
+      ].filter(Boolean)
     : [
         process.env.CLIENT_URL,
         "http://localhost:5173",
         "http://localhost:5174",
       ].filter(Boolean);
 
+// Remove duplicate origins
+const uniqueOrigins = [...new Set(allowedOrigins)];
+
+// CORS options shared between Express CORS middleware and Socket.IO
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (health checks, curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (uniqueOrigins.includes(origin)) return callback(null, true);
+    callback(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["set-cookie"],
+  credentials: true,
+  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  maxAge: 86400, // Cache preflight for 24 hours
+};
+
 // Socket.IO setup with connection limits and timeouts
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: uniqueOrigins,
     methods: ["GET", "POST"],
     credentials: true,
     allowEIO3: true,  // Allow Engine.IO v3 clients for compatibility
@@ -89,19 +102,18 @@ app.use(cookieParser());
 // Body parser
 app.use(express.json({ limit: "10kb" })); // Limit body size
 
-// Enable CORS
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. curl, Postman) in dev only
-      if (!origin && process.env.NODE_ENV !== "production")
-        return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  }),
-);
+// Enable CORS — handle preflight OPTIONS for all routes first
+app.options("*", cors(corsOptions));
+app.use(cors(corsOptions));
+
+// Health check endpoint at root (AFTER CORS so it gets proper headers)
+app.get("/", (req, res) => {
+  res.status(200).json({ status: "ok", message: "Server is running" });
+});
+
+app.head("/", (req, res) => {
+  res.status(200).end();
+});
 
 // Sanitirequest timeout middleware (30 seconds default)
 app.use(requestTimeout(30000));
