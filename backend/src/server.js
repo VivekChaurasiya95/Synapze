@@ -139,7 +139,7 @@ app.use((req, res, next) => {
 // Apply general rate limiting to all API routes
 app.use("/api", apiLimiter);
 
-// Mount routers
+// Mount routers — primary paths with /api prefix
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/users", userRoutes);
@@ -148,6 +148,17 @@ app.use("/api/mentors", mentorRoutes);
 app.use("/api/metrics", metricsRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
+
+// Mount routers — fallback paths WITHOUT /api prefix
+// (handles cases where frontend VITE_API_URL is set without /api suffix)
+app.use("/auth", authRoutes);
+app.use("/tasks", taskRoutes);
+app.use("/users", userRoutes);
+app.use("/chat", chatRoutes);
+app.use("/mentors", mentorRoutes);
+app.use("/metrics", metricsRoutes);
+app.use("/ai", aiRoutes);
+app.use("/admin", adminRoutes);
 
 // --- Production Frontend Serving ---
 if (process.env.NODE_ENV === "production") {
