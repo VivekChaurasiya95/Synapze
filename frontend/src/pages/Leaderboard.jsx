@@ -9,6 +9,7 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadLeaderboard();
@@ -17,11 +18,14 @@ const Leaderboard = () => {
   const loadLeaderboard = async () => {
     try {
       setLoading(true);
+      setError(null);
       const params = filter !== 'all' ? { role: filter } : {};
       const response = await userService.getLeaderboard({ ...params, limit: 50 });
-      setUsers(response.users);
+      setUsers(response?.users || []);
     } catch (error) {
       console.error('Error loading leaderboard:', error);
+      setError('Failed to load leaderboard. Please try again later.');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -94,6 +98,19 @@ const Leaderboard = () => {
           ))}
         </div>
       </div>
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="mb-8 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-center">
+          <p>{error}</p>
+          <button
+            onClick={loadLeaderboard}
+            className="mt-2 px-4 py-1 text-sm font-bold bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Podium Section */}
       {!loading && users.length >= 3 && (
