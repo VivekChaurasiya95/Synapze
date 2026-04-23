@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import dns from "node:dns";
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import logger from "./logger.js";
 
 // Connection pool configuration for better resource management
@@ -37,10 +36,16 @@ const connectDB = async (retries = MAX_RETRIES) => {
     configureDnsForSrv();
 
     const currentUri = process.env.MONGODB_URI;
-    
+
+    if (!currentUri) {
+      throw new Error("MONGODB_URI is not set");
+    }
+
     // Check if URI is a placeholder from Atlas
     if (currentUri.includes("<db_password>")) {
-       throw new Error("Invalid MongoDB URI: Please replace <db_password> with your actual password in .env");
+      throw new Error(
+        "Invalid MongoDB URI: Please replace <db_password> with your actual password in .env",
+      );
     }
 
     const conn = await mongoose.connect(currentUri, {
@@ -63,7 +68,7 @@ const connectDB = async (retries = MAX_RETRIES) => {
     logger.info("MongoDB Connected successfully", {
       host: conn.connection.host,
       dbName: conn.connection.db?.databaseName,
-      isMemoryServer: !!mongodInstance
+      isMemoryServer: !!mongodInstance,
     });
 
     // Handle connection events
@@ -97,12 +102,14 @@ const connectDB = async (retries = MAX_RETRIES) => {
       }
     }
   } catch (error) {
-    const isConnRefused = error.message.includes("ECONNREFUSED") || error.message.includes("Server selection timed out");
-    
+    const isConnRefused =
+      error.message.includes("ECONNREFUSED") ||
+      error.message.includes("Server selection timed out");
+
     if (isConnRefused) {
       logger.error(
         `MongoDB connection failed: ${error.message}. Is MongoDB running?`,
-        { attempt: MAX_RETRIES - retries + 1 }
+        { attempt: MAX_RETRIES - retries + 1 },
       );
     } else {
       logger.error(
@@ -120,9 +127,12 @@ const connectDB = async (retries = MAX_RETRIES) => {
     }
 
     // Fallback for development: Start an in-memory MongoDB instance
-    if (process.env.NODE_ENV !== 'production' && !mongodInstance) {
+    if (process.env.NODE_ENV !== "production" && !mongodInstance) {
       try {
-        logger.warn("⚠️ Local MongoDB not found. Starting in-memory fallback for development...");
+        logger.warn(
+          "⚠️ Local MongoDB not found. Starting in-memory fallback for development...",
+        );
+        const { MongoMemoryServer } = await import("mongodb-memory-server");
         mongodInstance = await MongoMemoryServer.create();
         const uri = mongodInstance.getUri();
         logger.info(`🚀 In-memory MongoDB started at: ${uri}`);
@@ -133,7 +143,9 @@ const connectDB = async (retries = MAX_RETRIES) => {
       }
     }
 
-    logger.critical("Max retries reached. Unable to connect to MongoDB. Please check your database connection.");
+    logger.critical(
+      "Max retries reached. Unable to connect to MongoDB. Please check your database connection.",
+    );
     process.exit(1);
   }
 };
